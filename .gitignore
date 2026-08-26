@@ -1,0 +1,25 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies (none required at runtime - this is dependency-free
+# Vanilla JS, but excluded in case a local tool ever adds one)
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env files
+.env
+.env.local
+
+# Version control
+.git/
