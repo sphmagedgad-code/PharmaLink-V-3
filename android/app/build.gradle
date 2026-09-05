@@ -1,0 +1,24 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.pharmalink.os'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.pharmalink.os'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0-live-alpha'
+    }
+}
+
+kotlin { jvmToolchain(17) }
+
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

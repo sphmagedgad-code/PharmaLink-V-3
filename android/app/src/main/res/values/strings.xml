@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PharmaLink OS</string>
+    <string name="listener_label">PharmaLink WhatsApp Listener</string>
+    <string name="listener_description">يستقبل إشعارات WhatsApp الجديدة ويضعها في طابور التحليل.</string>
+</resources>
