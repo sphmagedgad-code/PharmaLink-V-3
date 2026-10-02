@@ -3,9 +3,7 @@ package com.pharmalink.os
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -44,7 +42,9 @@ class MainActivity : Activity() {
         status = TextView(this).apply { setTextColor(Color.WHITE); textSize = 14f }
         sourceInput = EditText(this).apply {
             hint = "الجروبات/الأشخاص (اتركها فارغة لمراقبة كل WhatsApp)"
-            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY); singleLine = false
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.LTGRAY)
+            isSingleLine = false
             setText(getSharedPreferences("pharmalink_live", MODE_PRIVATE).getString("sources", ""))
         }
         val save = Button(this).apply { text = "حفظ مصادر المراقبة"; setOnClickListener { saveSources() } }
@@ -87,11 +87,4 @@ class MainActivity : Activity() {
     }
 
     override fun onResume() { super.onResume(); updateStatus(); LiveWebBridge.drainIfAlive() }
-
-    override fun onDestroy() { LiveWebBridge.detach(webView); webView.destroy(); super.onDestroy() }
-
-    private fun updateStatus() {
-        val enabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners").orEmpty().contains(packageName)
-        status.text = if (enabled) "🟢 استقبال WhatsApp: مفعل" else "🔴 استقبال WhatsApp: غير مفعل"
-    }
 }
