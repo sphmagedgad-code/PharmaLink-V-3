@@ -44,7 +44,7 @@ class LiveEventDb(context: Context) : SQLiteOpenHelper(context, "pharmalink_live
     fun pending(limit: Int = 100): List<LiveEvent> {
         val result = mutableListOf<LiveEvent>()
         readableDatabase.rawQuery(
-            "SELECT id,event_key,package_name,conversation,sender,text,received_at,status,attempts,last_error FROM events WHERE status IN ('QUEUED','FAILED') ORDER BY created_at ASC LIMIT ?",
+            "SELECT id,event_key,package_name,conversation,sender,text,received_at,status,attempts,last_error FROM events WHERE status = 'QUEUED' OR (status = 'FAILED' AND attempts < 5) ORDER BY created_at ASC LIMIT ?",
             arrayOf(limit.toString())
         ).use { c ->
             while (c.moveToNext()) {
