@@ -81,6 +81,7 @@ class MainActivity : Activity() {
 
     private fun saveSources() {
         getSharedPreferences("pharmalink_live", MODE_PRIVATE).edit().putString("sources", sourceInput.text.toString()).apply()
+        webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('pharmalink-sources-updated'));", null)
         Toast.makeText(this, "تم حفظ مصادر المراقبة", Toast.LENGTH_SHORT).show()
         updateStatus()
     }
