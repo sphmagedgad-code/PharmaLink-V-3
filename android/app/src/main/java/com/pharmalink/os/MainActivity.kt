@@ -11,12 +11,13 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import java.net.URLConnection
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.webkit.WebViewAssetLoader
 
 class MainActivity : Activity() {
     private lateinit var db: LiveEventDb
@@ -65,19 +66,40 @@ class MainActivity : Activity() {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest) = null
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                    return serveBundledAsset(request.url.toString())
+                }
             }
             addJavascriptInterface(NativeBridge(db), "PharmaLinkNative")
-        }
-        val loader = WebViewAssetLoader.Builder().addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest) = loader.shouldInterceptRequest(request.url)
         }
         LiveWebBridge.attach(webView)
         root.addView(webView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
         webView.loadUrl("https://appassets.androidplatform.net/assets/pharmalink/index.html")
         updateStatus()
+    }
+
+    private fun serveBundledAsset(url: String): WebResourceResponse? {
+        val prefix = "https://appassets.androidplatform.net/assets/"
+        if (!url.startsWith(prefix)) return null
+        val assetPath = url.removePrefix(prefix)
+        if (assetPath.isBlank() || assetPath.contains("..")) return null
+
+        return try {
+            val stream = assets.open("pharmalink/$assetPath")
+            val mime = URLConnection.guessContentTypeFromName(assetPath)
+                ?: when {
+                    assetPath.endsWith(".js") -> "application/javascript"
+                    assetPath.endsWith(".css") -> "text/css"
+                    assetPath.endsWith(".html") -> "text/html"
+                    assetPath.endsWith(".json") -> "application/json"
+                    assetPath.endsWith(".svg") -> "image/svg+xml"
+                    else -> "application/octet-stream"
+                }
+            WebResourceResponse(mime, "UTF-8", stream)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun saveSources() {
