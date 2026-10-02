@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.provider.Settings
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -86,5 +87,22 @@ class MainActivity : Activity() {
         updateStatus()
     }
 
-    override fun onResume() { super.onResume(); updateStatus(); LiveWebBridge.drainIfAlive() }
+    override fun onResume() {
+        super.onResume()
+        updateStatus()
+        LiveWebBridge.drainIfAlive()
+    }
+
+    override fun onDestroy() {
+        LiveWebBridge.detach(webView)
+        webView.destroy()
+        super.onDestroy()
+    }
+
+    private fun updateStatus() {
+        val enabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+            .orEmpty()
+            .contains(packageName)
+        status.text = if (enabled) "🟢 استقبال WhatsApp: مفعل" else "🔴 استقبال WhatsApp: غير مفعل"
+    }
 }
