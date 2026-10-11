@@ -97,7 +97,7 @@ export const search = wrapAsync('searchIndexRepo.search', async function search(
   // Search each token through the indexed prefix range. Keep a relevance
   // score so exact-token hits rank above prefix-only hits; no full-store scan.
   for (const queryToken of tokens) {
-    const range = IDBKeyRange.bound(queryToken, queryToken + '\\uffff');
+    const range = IDBKeyRange.bound(queryToken, queryToken + '\uffff');
     const rows = (await requestToPromise(tokenIndex.getAll(range))) || [];
     for (const row of rows) {
       if (entityTypes && !entityTypes.includes(row.entityType)) continue;
