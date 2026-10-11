@@ -134,6 +134,7 @@ export async function importWhatsAppFiles(files, onProgress) {
   let duplicates = 0;
   let ignored = 0;
   let urgentCount = 0;
+  let shortageCount = 0;
 
   files.forEach((file, fileIndex) => {
     const groupId = file.name;
@@ -158,6 +159,7 @@ export async function importWhatsAppFiles(files, onProgress) {
       seenInBatch.add(dedupeKey);
 
       if (classification.isUrgent) urgentCount += 1;
+      if (classification.isShortage) shortageCount += 1;
 
       const message = {
         id: generateId(),
@@ -268,6 +270,7 @@ export async function importWhatsAppFiles(files, onProgress) {
       price: trustedPrice,
       quantity: trustedQuantity,
       isUrgent: classification.isUrgent,
+      isShortage: Boolean(classification.isShortage),
     });
 
     if (onProgress && i % 50 === 0) {
@@ -290,6 +293,7 @@ export async function importWhatsAppFiles(files, onProgress) {
     duplicates,
     ignored,
     urgentCount,
+    shortageCount,
     entitiesCreated: preparedEntities.length,
     messages: messagesToInsert,
   };
