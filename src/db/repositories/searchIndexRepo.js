@@ -108,18 +108,12 @@ export const search = wrapAsync('searchIndexRepo.search', async function search(
           entityId: row.entityId,
           snippet: row.snippet || '',
           matchedQueryTokens: new Set(),
-          exactMatches: 0,
+          exactQueryTokens: new Set(),
         };
         byEntityRef.set(row.entityRef, result);
       }
-      if (!result.matchedQueryTokens.has(queryToken)) {
-        result.matchedQueryTokens.add(queryToken);
-        if (row.token === queryToken) result.exactMatches += 1;
-      } else if (row.token === queryToken) {
-        // The same entity may have several token rows only if data was
-        // written by an older indexer; preserve the best exact-match score.
-        result.exactMatches = Math.max(result.exactMatches, 1);
-      }
+      result.matchedQueryTokens.add(queryToken);
+      if (row.token === queryToken) result.exactQueryTokens.add(queryToken);
     }
   }
 
@@ -139,7 +133,7 @@ export const search = wrapAsync('searchIndexRepo.search', async function search(
       entityType: result.entityType,
       entityId: result.entityId,
       snippet: result.snippet,
-      score: result.matchedQueryTokens.size * 10 + result.exactMatches * 8 + (typeWeight[result.entityType] || 0),
+      score: result.matchedQueryTokens.size * 10 + result.exactQueryTokens.size * 8 + (typeWeight[result.entityType] || 0),
     }))
     .sort((a, b) => b.score - a.score);
 
