@@ -127,6 +127,7 @@ async function analyzeStagedFiles(mountEl) {
         <div class="entity-row"><span class="entity-row__title">رسائل مستوردة</span><span class="entity-row__price">${summary.imported}</span></div>
         <div class="entity-row"><span class="entity-row__title">مكررة تم تجاهلها</span><span class="entity-row__price">${summary.duplicates}</span></div>
         <div class="entity-row"><span class="entity-row__title">عاجلة</span><span class="entity-row__price">${summary.urgentCount}</span></div>
+        <div class="entity-row"><span class="entity-row__title">طلبات نقص/عدم توافر</span><span class="entity-row__price">${summary.shortageCount || 0}</span></div>
         <div class="entity-row"><span class="entity-row__title">بيانات مستخرجة</span><span class="entity-row__price">${summary.entitiesCreated}</span></div>
       </div>
       <div class="entity-card__section">
