@@ -19,14 +19,18 @@ function opportunityCard(opportunity, index, medicine, buyer) {
   card.className = 'entity-card';
   const bestMatch = opportunity.sellerMatches[0];
   const urgentStrip = opportunity.buyEntity.isUrgent ? '<div class="entity-card__urgent-strip">🔥 طلب عاجل - فرصة سريعة</div>' : '';
+  const priorityLabel = opportunity.priorityScore >= 75 ? 'أولوية قصوى' : opportunity.priorityScore >= 55 ? 'أولوية عالية' : opportunity.priorityScore >= 35 ? 'أولوية متوسطة' : 'أولوية عادية';
+  const reasons = (opportunity.priorityReasons || []).slice(0, 4).join(' • ');
+  const estimatedValue = opportunity.estimatedValue ? `<div class="price-row__note">قيمة تقديرية للطلب: ${opportunity.estimatedValue.toLocaleString('en-US')} ج</div>` : '';
 
   card.innerHTML = `
     ${urgentStrip}
     <div class="entity-card__header">
       <span class="entity-card__title">${medicine ? medicine.name : opportunity.buyEntity.rawMedicineText}</span>
-      <span class="badge badge--deal">فرصة بيع</span>
+      <span class="badge badge--deal">${priorityLabel} · ${opportunity.priorityScore}</span>
     </div>
     <div class="entity-card__section">
+      ${reasons ? `<div class="entity-card__section-label">سبب الأولوية: ${reasons}</div>` : ''}
       <div class="entity-card__section-label">المشتري</div>
       <div class="entity-row"><span class="entity-row__title">${buyer ? buyer.name : opportunity.buyEntity.phone}</span><span class="entity-row__meta">${opportunity.buyEntity.phone}</span></div>
       <div class="entity-card__section-label">أفضل ${opportunity.sellerMatches.length} عرض من الموردين</div>
@@ -45,6 +49,7 @@ function opportunityCard(opportunity, index, medicine, buyer) {
       <div>
         <div class="price-row__main">${bestMatch.price} ج</div>
         <div class="price-row__note">أفضل سعر متاح - ${bestMatch.contact.name}</div>
+        ${estimatedValue}
       </div>
       <span class="price-row__badge">جاهزة للتحويل</span>
     </div>
