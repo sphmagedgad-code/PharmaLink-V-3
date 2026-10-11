@@ -12,6 +12,7 @@
 import { getRecentEntities } from '../db/repositories/parsedEntitiesRepo.js';
 import { getDealsByBuyer } from '../db/repositories/dealsRepo.js';
 import { getMedicineById } from '../db/repositories/medicinesRepo.js';
+import { getContactById } from '../db/repositories/contactsRepo.js';
 import { matchSellersForMedicine } from './matchSupplier.js';
 import { DEAL_STATUS, PARSED_ENTITY_TYPE, MEDICINE_CATEGORY } from '../shared/constants.js';
 
@@ -112,6 +113,7 @@ export async function findSalesOpportunities(scanLimit = 300) {
   const dealCheckCache = new Map();
   const seenBuyerMedicinePairs = new Set();
   const medicineCache = new Map();
+  const buyerCache = new Map();
   const now = Date.now();
 
   for (const buyEntity of buyEntities) {
@@ -137,7 +139,11 @@ export async function findSalesOpportunities(scanLimit = 300) {
       medicine = await getMedicineById(buyEntity.medicineId);
       medicineCache.set(buyEntity.medicineId, medicine || null);
     }
-    const buyer = buyEntity.contactId ? null : null;
+    let buyer = buyerCache.get(buyEntity.contactId);
+    if (buyer === undefined) {
+      buyer = buyEntity.contactId ? await getContactById(buyEntity.contactId) : null;
+      buyerCache.set(buyEntity.contactId, buyer || null);
+    }
     const scored = scoreOpportunity(buyEntity, medicine, buyer, sellerMatches, now);
     opportunities.push({
       buyEntity,
