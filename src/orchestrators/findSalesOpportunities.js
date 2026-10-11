@@ -35,6 +35,10 @@ function scoreOpportunity(buyEntity, medicine, buyer, sellerMatches, now) {
     score += 40;
     reasons.push('طلب عاجل');
   }
+  if (buyEntity.isShortage) {
+    score += 35;
+    reasons.push('طلب بسبب نقص/عدم توافر');
+  }
 
   if (category === MEDICINE_CATEGORY.SHORTAGE) {
     score += 35;
