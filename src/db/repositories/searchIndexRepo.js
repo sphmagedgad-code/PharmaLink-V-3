@@ -92,36 +92,56 @@ export const search = wrapAsync('searchIndexRepo.search', async function search(
   const db = await getDatabase();
   const tx = db.transaction([STORE], 'readonly');
   const tokenIndex = tx.objectStore(STORE).index('by_token');
-
-  // Prefix range on the first token only - this is the single indexed
-  // scan; it never touches rows outside the matching prefix range.
-  const [firstToken, ...restTokens] = tokens;
-  const range = IDBKeyRange.bound(firstToken, firstToken + '\uffff');
-  const candidates = (await requestToPromise(tokenIndex.getAll(range))) || [];
-
-  // Narrow further in-memory (only over the already-small candidate
-  // set, not the full store) if the query had more than one word.
   const byEntityRef = new Map();
-  for (const row of candidates) {
-    if (entityTypes && !entityTypes.includes(row.entityType)) continue;
-    if (!byEntityRef.has(row.entityRef)) {
-      byEntityRef.set(row.entityRef, { entityType: row.entityType, entityId: row.entityId, snippet: row.snippet, matchedTokens: new Set() });
+
+  // Search each token through the indexed prefix range. Keep a relevance
+  // score so exact-token hits rank above prefix-only hits; no full-store scan.
+  for (const queryToken of tokens) {
+    const range = IDBKeyRange.bound(queryToken, queryToken + '\\uffff');
+    const rows = (await requestToPromise(tokenIndex.getAll(range))) || [];
+    for (const row of rows) {
+      if (entityTypes && !entityTypes.includes(row.entityType)) continue;
+      let result = byEntityRef.get(row.entityRef);
+      if (!result) {
+        result = {
+          entityType: row.entityType,
+          entityId: row.entityId,
+          snippet: row.snippet || '',
+          matchedQueryTokens: new Set(),
+          exactMatches: 0,
+        };
+        byEntityRef.set(row.entityRef, result);
+      }
+      if (!result.matchedQueryTokens.has(queryToken)) {
+        result.matchedQueryTokens.add(queryToken);
+        if (row.token === queryToken) result.exactMatches += 1;
+      } else if (row.token === queryToken) {
+        // The same entity may have several token rows only if data was
+        // written by an older indexer; preserve the best exact-match score.
+        result.exactMatches = Math.max(result.exactMatches, 1);
+      }
     }
-    byEntityRef.get(row.entityRef).matchedTokens.add(row.token);
   }
 
-  let results = Array.from(byEntityRef.values());
+  // Keep AND semantics for precision: every meaningful query token must
+  // be represented in the same entity. Then rank by coverage and exactness.
+  const requiredTokenCount = tokens.length;
+  const typeWeight = {
+    [SEARCH_ENTITY_TYPE.MEDICINE]: 2,
+    [SEARCH_ENTITY_TYPE.PARSED_ENTITY]: 2,
+    [SEARCH_ENTITY_TYPE.CONTACT]: 1,
+    [SEARCH_ENTITY_TYPE.DEAL]: 0.5,
+    [SEARCH_ENTITY_TYPE.WHATSAPP_MESSAGE]: 0,
+  };
+  const results = Array.from(byEntityRef.values())
+    .filter((result) => result.matchedQueryTokens.size === requiredTokenCount)
+    .map((result) => ({
+      entityType: result.entityType,
+      entityId: result.entityId,
+      snippet: result.snippet,
+      score: result.matchedQueryTokens.size * 10 + result.exactMatches * 8 + (typeWeight[result.entityType] || 0),
+    }))
+    .sort((a, b) => b.score - a.score);
 
-  if (restTokens.length > 0) {
-    // For remaining query words, confirm the same entityRef also has
-    // a row for that token (second indexed lookup, still bounded).
-    for (const extraToken of restTokens) {
-      const extraRange = IDBKeyRange.bound(extraToken, extraToken + '\uffff');
-      const extraRows = (await requestToPromise(tokenIndex.getAll(extraRange))) || [];
-      const refsWithToken = new Set(extraRows.map((r) => r.entityRef));
-      results = results.filter((r) => refsWithToken.has(`${r.entityType}:${r.entityId}`));
-    }
-  }
-
-  return results.slice(0, SEARCH_RESULT_LIMIT).map(({ entityType, entityId, snippet }) => ({ entityType, entityId, snippet }));
+  return results.slice(0, SEARCH_RESULT_LIMIT);
 });
