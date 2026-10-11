@@ -7,7 +7,7 @@
  * cheap to run across hundreds of thousands of lines.
  */
 
-import { BUY_KEYWORDS, SELL_KEYWORDS, URGENT_KEYWORDS, KNOWN_DRUGS, PRICE_RE, PHONE_RE, QTY_RE } from '../shared/messageKeywords.js';
+import { BUY_KEYWORDS, SELL_KEYWORDS, URGENT_KEYWORDS, SHORTAGE_KEYWORDS, KNOWN_DRUGS, PRICE_RE, PHONE_RE, QTY_RE } from '../shared/messageKeywords.js';
 import { PARSED_ENTITY_TYPE, WHATSAPP_MESSAGE_STATUS } from '../shared/constants.js';
 import { normalizeText } from '../shared/normalize.js';
 
@@ -229,6 +229,7 @@ export function classifyMessage(rawText, groupId, receivedAt) {
   const price = extractPrice(text);
   const quantity = extractQuantity(text);
   const isUrgent = containsAny(text, URGENT_KEYWORDS);
+  const isShortage = containsAny(text, SHORTAGE_KEYWORDS);
   const isSingle = drugs.length === 1;
 
   return {
@@ -242,6 +243,7 @@ export function classifyMessage(rawText, groupId, receivedAt) {
     price,
     quantity,
     isUrgent,
+    isShortage,
     isSingle,
   };
 }
