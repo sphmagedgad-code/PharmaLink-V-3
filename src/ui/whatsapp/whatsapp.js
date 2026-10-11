@@ -6,6 +6,7 @@
  */
 
 import { importWhatsAppFiles } from '../../orchestrators/importWhatsAppFile.js';
+import { readZipTxtFiles } from '../../shared/zipTxtImport.js';
 import { archiveAndDeleteOldMessages, exportOldMessages } from '../../orchestrators/archiveWhatsApp.js';
 import { findSalesOpportunities } from '../../orchestrators/findSalesOpportunities.js';
 import * as whatsappRepo from '../../db/repositories/whatsappRepo.js';
@@ -49,7 +50,7 @@ function renderStagedFiles(mountEl) {
 }
 
 function stageFiles(mountEl, fileList) {
-  const incoming = Array.from(fileList).filter((f) => f.name.toLowerCase().endsWith('.txt'));
+  const incoming = Array.from(fileList).filter((f) => /\.(txt|zip)$/i.test(f.name));
   for (const file of incoming) {
     if (!stagedFiles.some((f) => f.name === file.name)) {
       stagedFiles.push(file);
@@ -76,15 +77,26 @@ async function analyzeStagedFiles(mountEl) {
   const filesToAnalyze = stagedFiles;
   let summary;
   try {
-    const fileContents = await Promise.all(
-      filesToAnalyze.map(async (f) => ({ name: f.name, text: await readFileAsText(f) }))
-    );
+    const fileContents = [];
+    for (const file of filesToAnalyze) {
+      if (/\.txt$/i.test(file.name)) {
+        fileContents.push({ name: file.name, text: await readFileAsText(file) });
+      } else if (/\.zip$/i.test(file.name)) {
+        const entries = await readZipTxtFiles(file);
+        for (const entry of entries) {
+          // Keep the archive name in the import identity so two ZIPs
+          // containing a same-named TXT do not overwrite one another.
+          fileContents.push({ name: `${file.name} :: ${entry.name}`, text: entry.text });
+        }
+      }
+    }
+    if (fileContents.length === 0) throw new Error('لم يتم العثور على ملفات TXT صالحة للاستيراد.');
 
     summary = await importWhatsAppFiles(fileContents, ({ phase, current, total }) => {
       const pct = total > 0 ? Math.round((current / total) * 100) : 0;
       progressBar.style.width = `${pct}%`;
       const phaseLabel = { classifying: 'تحليل الرسائل', linking: 'ربط البيانات', saving: 'الحفظ' }[phase] || phase;
-      progressText.textContent = `تحليل ${filesToAnalyze.length} ملف - ${phaseLabel}... ${current}/${total}`;
+      progressText.textContent = `تحليل ${fileContents.length} ملف TXT - ${phaseLabel}... ${current}/${total}`;
     });
   } catch (err) {
     processingEl.style.display = 'none';
@@ -144,12 +156,12 @@ export async function render(mountEl) {
     <div id="wa-welcome" class="welcome">
       <div class="dz-icon" style="font-size:2.6rem">📲</div>
       <h2>استيراد محادثات واتساب</h2>
-      <p>ارفع ملفات نصية (.txt) مصدّرة من واتساب - يمكن رفع أكثر من ملف دفعة واحدة</p>
+      <p>ارفع ملفات TXT أو أرشيف ZIP يحتوي على ملفات TXT المصدّرة من واتساب - يمكن رفع أكثر من ملف دفعة واحدة</p>
       <div id="wa-dropzone" class="dropzone">
         <div class="dz-icon">📁</div>
         <h3>اسحب الملفات هنا أو اضغط للاختيار</h3>
-        <p>ملفات .txt فقط</p>
-        <input id="wa-file-input" type="file" accept=".txt" multiple style="display:none" />
+        <p>ملفات .txt أو .zip</p>
+        <input id="wa-file-input" type="file" accept=".txt,.zip,application/zip" multiple style="display:none" />
       </div>
       <div id="wa-file-tags" class="file-tags"></div>
       <button id="wa-analyze-btn" class="btn btn--gold" style="width:100%;" disabled>تحليل (0)</button>
