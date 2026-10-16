@@ -120,7 +120,8 @@ export async function findSalesOpportunities(scanLimit = 300) {
   const now = Date.now();
 
   for (const buyEntity of buyEntities) {
-    const pairKey = `${buyEntity.contactId}:${buyEntity.medicineId}`;
+    const buyerIdentity = buyEntity.contactId || buyEntity.phone || buyEntity.sourceMessageId || buyEntity.id;
+    const pairKey = `${buyerIdentity}:${buyEntity.medicineId}`;
     // getRecentEntities returns newest first: keep the freshest request only.
     if (seenBuyerMedicinePairs.has(pairKey)) continue;
     seenBuyerMedicinePairs.add(pairKey);
