@@ -107,6 +107,36 @@ export const getRecentEntities = wrapAsync('parsedEntitiesRepo.getRecentEntities
   });
 });
 
+/**
+ * Returns the newest entities of one type without letting unrelated
+ * high-volume message types consume the entire opportunity scan.
+ * The cursor is newest-first and bounded to protect low-end devices.
+ */
+export const getRecentEntitiesByType = wrapAsync('parsedEntitiesRepo.getRecentEntitiesByType', async function getRecentEntitiesByType(type, limit = 300, maxScan = 10000) {
+  const safeLimit = Math.max(1, Math.min(2000, Number(limit) || 300));
+  const safeMaxScan = Math.max(safeLimit, Math.min(50000, Number(maxScan) || 10000));
+  const db = await getDatabase();
+  const tx = db.transaction([STORE], 'readonly');
+  const index = tx.objectStore(STORE).index('by_receivedAt');
+
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let scanned = 0;
+    const request = index.openCursor(null, 'prev');
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor || results.length >= safeLimit || scanned >= safeMaxScan) {
+        resolve(results);
+        return;
+      }
+      scanned += 1;
+      if (cursor.value.type === type) results.push(cursor.value);
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error);
+  });
+});
+
 /** Cascading cleanup: deletes parsed entities for a set of source message ids (used by archive/delete). */
 export const deleteBySourceMessageIds = wrapAsync('parsedEntitiesRepo.deleteBySourceMessageIds', async function deleteBySourceMessageIds(sourceMessageIds) {
   if (sourceMessageIds.length === 0) return;
