@@ -9,7 +9,7 @@
  * pair, preventing repeated requests from flooding the opportunity list.
  */
 
-import { getRecentEntities } from '../db/repositories/parsedEntitiesRepo.js';
+import { getRecentEntitiesByType } from '../db/repositories/parsedEntitiesRepo.js';
 import { getDealsByBuyer } from '../db/repositories/dealsRepo.js';
 import { getMedicineById } from '../db/repositories/medicinesRepo.js';
 import { getContactById } from '../db/repositories/contactsRepo.js';
@@ -111,8 +111,7 @@ function scoreOpportunity(buyEntity, medicine, buyer, sellerMatches, now) {
  * @returns {Promise<Array<{buyEntity: object, sellerMatches: Array, priorityScore: number, priorityReasons: string[], estimatedValue: number|null}>>}
  */
 export async function findSalesOpportunities(scanLimit = 300) {
-  const recentEntities = await getRecentEntities(scanLimit);
-  const buyEntities = recentEntities.filter((e) => e.type === PARSED_ENTITY_TYPE.BUY);
+  const buyEntities = await getRecentEntitiesByType(PARSED_ENTITY_TYPE.BUY, scanLimit, Math.max(10000, scanLimit * 20));
   const opportunities = [];
   const dealCheckCache = new Map();
   const seenBuyerMedicinePairs = new Set();
