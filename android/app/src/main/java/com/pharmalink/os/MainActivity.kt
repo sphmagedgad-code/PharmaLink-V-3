@@ -44,7 +44,7 @@ class MainActivity : Activity() {
         status = TextView(this).apply { setTextColor(Color.WHITE); textSize = 14f }
         sourceInput = EditText(this).apply {
             hint = "الجروبات/الأشخاص (اتركها فارغة لمراقبة كل WhatsApp)"
-            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY); singleLine = false
+            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY); setSingleLine(false)
             setText(getSharedPreferences("pharmalink_live", MODE_PRIVATE).getString("sources", ""))
         }
         val save = Button(this).apply { text = "حفظ مصادر المراقبة"; setOnClickListener { saveSources() } }
