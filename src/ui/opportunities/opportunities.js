@@ -14,6 +14,20 @@ import { addDeal } from '../../db/repositories/dealsRepo.js';
 
 let opportunities = [];
 
+// Preserve the full phone in the UI; normalize only the WhatsApp URL.
+function phoneLinks(phone) {
+  const raw = String(phone || '').trim();
+  if (!raw) return '<span class="entity-row__meta">رقم الهاتف غير متاح في الرسالة</span>';
+  let digits = raw.replace(/\\D/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('0')) digits = '2' + digits;
+  const safePhone = raw.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const waLink = digits.length >= 10
+    ? `<a class="btn-call" href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer">واتساب</a>`
+    : '';
+  return `<div class="entity-row__info"><span class="entity-row__title">${safePhone}</span><div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn-call" href="tel:${digits || safePhone}">اتصال</a>${waLink}</div></div>`;
+}
+
 function opportunityCard(opportunity, index, medicine, buyer) {
   const card = document.createElement('div');
   card.className = 'entity-card';
@@ -32,15 +46,18 @@ function opportunityCard(opportunity, index, medicine, buyer) {
     <div class="entity-card__section">
       ${reasons ? `<div class="entity-card__section-label">سبب الأولوية: ${reasons}</div>` : ''}
       <div class="entity-card__section-label">المشتري</div>
-      <div class="entity-row"><span class="entity-row__title">${buyer ? buyer.name : opportunity.buyEntity.phone}</span><span class="entity-row__meta">${opportunity.buyEntity.phone}</span></div>
+      <div class="entity-row">
+        <div style="flex:1;min-width:0"><span class="entity-row__title" style="direction:rtl">${buyer?.name || 'مشتري من رسالة واتساب'}</span><div class="entity-row__meta" style="margin-top:4px">رقم المشتري</div></div>
+        ${phoneLinks(opportunity.buyEntity.phone || buyer?.whatsapp)}
+      </div>
       <div class="entity-card__section-label">أفضل ${opportunity.sellerMatches.length} عرض من الموردين</div>
       ${opportunity.sellerMatches
         .slice(0, 3)
         .map(
           (m) => `
-        <div class="entity-row">
-          <span class="entity-row__title">${m.contact.name}</span>
-          <span class="entity-row__info"><span class="entity-row__price">${m.price} ج</span></span>
+        <div class="entity-row" style="align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1;min-width:130px"><span class="entity-row__title" style="direction:rtl">${m.contact.name || 'مورد'}</span><div class="entity-row__meta" style="margin-top:4px">رقم البائع: ${m.contact.whatsapp || m.contact.phone || 'غير مسجل'}</div></div>
+          <span class="entity-row__info"><span class="entity-row__price">${m.price} ج</span>${phoneLinks(m.contact.whatsapp || m.contact.phone)}</span>
         </div>`
         )
         .join('')}
